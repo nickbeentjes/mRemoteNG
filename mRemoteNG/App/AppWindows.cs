@@ -107,7 +107,7 @@ namespace mRemoteNG.App
                     case WindowType.ScpTransfer:
                         if (_scpTransferForm == null || _scpTransferForm.IsDisposed)
                             _scpTransferForm = new ScpTransferWindow();
-                        _scpTransferForm.Show(dockPanel, DockState.DockBottom);
+                        _scpTransferForm.Show(dockPanel, WeifenLuo.WinFormsUI.Docking.DockState.DockBottom);
                         break;
                 }
             }
