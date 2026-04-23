@@ -30,16 +30,22 @@ import requests
 
 # ── Config (edit these or set as env vars) ───────────────────────────────────
 
-HQ_URL       = os.environ.get("HQ_URL",       "https://keess-mac-mini.taile6c48b.ts.net")
-AGENT_TOKEN  = os.environ.get("AGENT_TOKEN",  "change-me")
-POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "5"))  # seconds
+HQ_URL        = os.environ.get("HQ_URL",        "https://keess-mac-mini.taile6c48b.ts.net")
+AGENT_TOKEN   = os.environ.get("AGENT_TOKEN",   "change-me")
+POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "5"))
+LOG_FILE      = os.environ.get("LOG_FILE", os.path.join(os.path.dirname(__file__), "poller.log"))
 
 # ── Logging ───────────────────────────────────────────────────────────────────
+
+_handlers = [logging.StreamHandler(sys.stdout)]
+if LOG_FILE:
+    _handlers.append(logging.FileHandler(LOG_FILE, encoding="utf-8"))
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=_handlers,
 )
 log = logging.getLogger("nickhq-agent")
 
