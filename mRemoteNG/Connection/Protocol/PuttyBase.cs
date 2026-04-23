@@ -1,4 +1,5 @@
 ﻿using mRemoteNG.App;
+using mRemoteNG.Connection.NickHq;
 using mRemoteNG.Messages;
 using mRemoteNG.Resources.Language;
 using mRemoteNG.Security;
@@ -30,6 +31,7 @@ namespace mRemoteNG.Connection.Protocol
         private const int IDM_RECONF = 0x50; // PuTTY Settings Menu ID
         private bool _isPuttyNg;
         private readonly DisplayProperties _display = new();
+        private string? _nickHqSessionId;
 
         #region Public Properties
 
@@ -46,6 +48,12 @@ namespace mRemoteNG.Connection.Protocol
         public bool Focused => NativeMethods.GetForegroundWindow() == PuttyHandle;
 
         public string SessionLogPath { get; private set; }
+
+        /// <summary>
+        /// The NickHQ session ID assigned at connect time. Null if NickHQ is disabled
+        /// or registration failed.
+        /// </summary>
+        public string? NickHqSessionId => _nickHqSessionId;
 
         #endregion
 
@@ -312,6 +320,14 @@ namespace mRemoteNG.Connection.Protocol
                         "PuttyBase: could not set up session logging: " + ex.Message, true);
                 }
 
+                // Register with NickHQ (no-ops silently when AGENT_TOKEN is empty)
+                _nickHqSessionId = NickHqClient.RegisterSession(
+                    hostname: InterfaceControl.Info?.Hostname ?? "",
+                    username: InterfaceControl.Info?.Username ?? "",
+                    protocol: GetType().Name,
+                    label: InterfaceControl.Info?.Name ?? "",
+                    logPath: SessionLogPath ?? "");
+
                 PuttyProcess.StartInfo.Arguments = arguments.ToString();
                 // add additional SSH options, f.e. tunnel or noshell parameters that may be specified for the the connnection
                 if (!string.IsNullOrEmpty(InterfaceControl.Info.SSHOptions))
@@ -421,6 +437,15 @@ namespace mRemoteNG.Connection.Protocol
 
                 Resize(this, new EventArgs());
                 base.Connect();
+
+                // Register this session in the tab registry so NickHqClient can
+                // locate the ConnectionTab for paste and screenshot commands.
+                if (!string.IsNullOrEmpty(_nickHqSessionId) &&
+                    InterfaceControl?.Parent is mRemoteNG.UI.Tabs.ConnectionTab connTab)
+                {
+                    SessionTabRegistry.Register(_nickHqSessionId, connTab);
+                }
+
                 return true;
             }
             catch (Exception ex)
@@ -482,6 +507,14 @@ namespace mRemoteNG.Connection.Protocol
 
         public override void Close()
         {
+            // Unregister from NickHQ and the tab registry before tearing down the process
+            if (_nickHqSessionId != null)
+            {
+                SessionTabRegistry.Unregister(_nickHqSessionId);
+                NickHqClient.UnregisterSession(_nickHqSessionId);
+                _nickHqSessionId = null;
+            }
+
             try
             {
                 if (PuttyProcess?.HasExited == false)
