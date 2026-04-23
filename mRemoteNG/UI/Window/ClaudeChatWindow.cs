@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
@@ -146,9 +147,15 @@ namespace mRemoteNG.UI.Window
             {
                 AppendLine("[System] GSD launcher not yet wired — coming in Phase 3");
             }
+            else if (args.StartsWith("--setkey ", StringComparison.OrdinalIgnoreCase))
+            {
+                string key = args.Substring("--setkey ".Length).Trim();
+                SaveApiKey(key);
+                AppendLine("[System] API key saved.");
+            }
             else
             {
-                AppendLine("[System] Usage: cgo --connect <name> | cgo --discover | cgo --gsd <cmd>");
+                AppendLine("[System] Usage: cgo --connect <name> | cgo --discover | cgo --gsd <cmd> | cgo --setkey <key>");
             }
 
             AppendLine("");
@@ -157,9 +164,12 @@ namespace mRemoteNG.UI.Window
 
         private async Task<string> SendToClaudeAsync(string userMessage)
         {
-            string apiKey = Environment.GetEnvironmentVariable("CLAUDE_API_KEY") ?? string.Empty;
+            string apiKey = LoadApiKey();
             if (string.IsNullOrEmpty(apiKey))
-                throw new InvalidOperationException("CLAUDE_API_KEY environment variable is not set.");
+            {
+                AppendLine("[System] No Claude API key set. Use Options → Claude API Key to configure.");
+                return string.Empty;
+            }
 
             _conversationHistory.Add(new { role = "user", content = userMessage });
 
@@ -225,6 +235,26 @@ namespace mRemoteNG.UI.Window
                 Guid transferId = AppWindows.ScpTransferForm.AddTransfer(direction, filename, connectionInfo.Hostname);
                 _ = HostCallExecutor.ExecuteAsync(call, connectionInfo, transferId);
             }
+        }
+
+        private static readonly string _keyFilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "mRemoteNG", "claude_api_key.txt");
+
+        private static string LoadApiKey()
+        {
+            // env var takes priority
+            var envKey = Environment.GetEnvironmentVariable("CLAUDE_API_KEY");
+            if (!string.IsNullOrEmpty(envKey)) return envKey;
+            // fall back to saved file
+            if (File.Exists(_keyFilePath)) return File.ReadAllText(_keyFilePath).Trim();
+            return string.Empty;
+        }
+
+        private static void SaveApiKey(string key)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_keyFilePath)!);
+            File.WriteAllText(_keyFilePath, key.Trim());
         }
 
         private void AppendLine(string text)

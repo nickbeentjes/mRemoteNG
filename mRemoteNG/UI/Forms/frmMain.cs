@@ -457,6 +457,7 @@ namespace mRemoteNG.UI.Forms
 
         private async Task CheckForUpdates()
         {
+            return; // disabled — running a custom fork, upstream updates would overwrite our changes
             if (!CommonRegistrySettings.AllowCheckForUpdates) return;
             if (!CommonRegistrySettings.AllowCheckForUpdatesAutomatical) return;
 
