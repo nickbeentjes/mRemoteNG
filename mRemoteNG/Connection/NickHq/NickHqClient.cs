@@ -529,6 +529,59 @@ namespace mRemoteNG.Connection.NickHq
             }
         }
 
+        // ------------------------------------------------------------------ alert
+
+        /// <summary>
+        /// Posts an alert to all connected NickHQ servers for the given session.
+        /// Used by <see cref="mRemoteNG.Orchestrator.HealthMonitor"/> to report stuck orchestrators.
+        /// </summary>
+        /// <param name="sessionId">The NickHQ session ID.</param>
+        /// <param name="level">Severity string, e.g. "warning" or "error".</param>
+        /// <param name="title">Short alert title.</param>
+        /// <param name="detail">Longer description / body text.</param>
+        public static async Task PostAlertAsync(string sessionId, string level, string title, string detail)
+        {
+            if (!Enabled) return;
+            if (string.IsNullOrEmpty(sessionId)) return;
+
+            var body = new JsonObject
+            {
+                ["level"]  = level,
+                ["title"]  = title,
+                ["detail"] = detail
+            };
+
+            string json = body.ToJsonString();
+
+            foreach (var server in _connectedServers.Values.ToList())
+            {
+                try
+                {
+                    string url = $"{server.Url}/sessions/{sessionId}/alert?token={Uri.EscapeDataString(server.AgentToken)}";
+                    using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                    var resp = await _http.PostAsync(url, content);
+                    if (!resp.IsSuccessStatusCode)
+                        LogWarning($"NickHqClient: POST alert returned {(int)resp.StatusCode} ({server.Name})");
+                }
+                catch (Exception ex)
+                {
+                    LogWarning($"NickHqClient: POST alert failed ({server.Name}): {ex.Message}");
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ log path lookup (for orchestrator)
+
+        /// <summary>
+        /// Returns the log file path registered for the given session, or <c>null</c> if none.
+        /// Used by <see cref="mRemoteNG.Orchestrator.OrchestratorEngine"/> to tail terminal output.
+        /// </summary>
+        public static string? TryGetLogPath(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId)) return null;
+            return _logPaths.TryGetValue(sessionId, out string? path) ? path : null;
+        }
+
         // ------------------------------------------------------------------ env-var fallback
 
         /// <summary>

@@ -282,7 +282,10 @@ namespace mRemoteNG.UI.Forms
             OptionsForm = new FrmOptions();
 
             if (NickHqConfig.ConnectOnStartup)
+            {
                 NickHqClient.ConnectAll();
+                Orchestrator.HealthMonitor.Start();
+            }
 
             if (!Properties.OptionsTabsPanelsPage.Default.CreateEmptyPanelOnStartUp)
             {
@@ -825,6 +828,7 @@ namespace mRemoteNG.UI.Forms
             AppWindows.ConfigForm.Show(pnlDock, DockState.DockLeft);
             AppWindows.ErrorsForm.Show(pnlDock, DockState.DockBottomAutoHide);
             AppWindows.ClaudeChatForm.Show(pnlDock, DockState.DockBottom);
+            AppWindows.NotificationsForm.Show(pnlDock, DockState.DockBottom);
             AppWindows.SessionLogForm.Show(pnlDock, DockState.DockLeft);
             viewMenu._mMenViewErrorsAndInfos.Checked = true;
 

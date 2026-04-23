@@ -16,5 +16,6 @@
         ClaudeChat = 17,
         SessionLog = 18,
         ScpTransfer = 19,
+        NotificationsWindow = 20,
     }
 }

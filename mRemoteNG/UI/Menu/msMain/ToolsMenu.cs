@@ -2,6 +2,7 @@
 using System.Runtime.Versioning;
 using System.Windows.Forms;
 using mRemoteNG.App;
+using mRemoteNG.Connection.NickHq;
 using mRemoteNG.Credential;
 using mRemoteNG.Resources.Language;
 
@@ -14,6 +15,7 @@ namespace mRemoteNG.UI.Menu
         private ToolStripMenuItem _mMenToolsExternalApps;
         private ToolStripMenuItem _mMenToolsPortScan;
         private ToolStripMenuItem _mMenToolsUvncsc;
+        private ToolStripMenuItem _mMenToolsNickHqServers;
 
         public Form MainForm { get; set; }
         public ICredentialRepositoryList CredentialProviderCatalog { get; set; }
@@ -29,15 +31,18 @@ namespace mRemoteNG.UI.Menu
             _mMenToolsUvncsc = new ToolStripMenuItem();
             _mMenToolsExternalApps = new ToolStripMenuItem();
             _mMenToolsPortScan = new ToolStripMenuItem();
-            // 
+            _mMenToolsNickHqServers = new ToolStripMenuItem();
+            //
             // mMenTools
-            // 
+            //
             DropDownItems.AddRange(new ToolStripItem[]
             {
                 _mMenToolsSshTransfer,
                 _mMenToolsUvncsc,
                 _mMenToolsExternalApps,
-                _mMenToolsPortScan
+                _mMenToolsPortScan,
+                new ToolStripSeparator(),
+                _mMenToolsNickHqServers
             });
             Name = "mMenTools";
             Size = new System.Drawing.Size(48, 20);
@@ -74,6 +79,13 @@ namespace mRemoteNG.UI.Menu
             _mMenToolsPortScan.Size = new System.Drawing.Size(184, 22);
             _mMenToolsPortScan.Text = Language.PortScan;
             _mMenToolsPortScan.Click += mMenToolsPortScan_Click;
+            //
+            // mMenToolsNickHqServers
+            //
+            _mMenToolsNickHqServers.Name = "mMenToolsNickHqServers";
+            _mMenToolsNickHqServers.Size = new System.Drawing.Size(184, 22);
+            _mMenToolsNickHqServers.Text = "NickHQ Servers...";
+            _mMenToolsNickHqServers.Click += mMenToolsNickHqServers_Click;
         }
 
         public void ApplyLanguage()
@@ -109,6 +121,12 @@ namespace mRemoteNG.UI.Menu
         private void mMenToolsOptions_Click(object sender, EventArgs e)
         {
             AppWindows.Show(WindowType.Options);
+        }
+
+        private void mMenToolsNickHqServers_Click(object sender, EventArgs e)
+        {
+            using var dlg = new NickHqSettingsForm();
+            dlg.ShowDialog(MainForm);
         }
 
         #endregion

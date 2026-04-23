@@ -88,6 +88,9 @@ namespace mRemoteNG.Config.Settings
 
                 if (persistString == typeof(ScpTransferWindow).ToString())
                     return AppWindows.ScpTransferForm;
+
+                if (persistString == typeof(NotificationsWindow).ToString())
+                    return AppWindows.NotificationsForm;
             }
             catch (Exception ex)
             {

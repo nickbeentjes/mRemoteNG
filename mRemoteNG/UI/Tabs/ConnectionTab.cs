@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -9,9 +10,11 @@ using mRemoteNG.Connection;
 using mRemoteNG.Connection.HostCall;
 using mRemoteNG.Connection.Protocol;
 using mRemoteNG.Connection.Protocol.VNC;
+using mRemoteNG.Orchestrator;
 using mRemoteNG.Properties;
 using mRemoteNG.UI;
 using mRemoteNG.UI.TaskDialog;
+using mRemoteNG.UI.Window;
 using WeifenLuo.WinFormsUI.Docking;
 using mRemoteNG.Resources.Language;
 using System.Runtime.Versioning;
@@ -35,6 +38,12 @@ namespace mRemoteNG.UI.Tabs
         private ToolStrip _toolbar;
         private ToolStripButton _btnPaste;
         private ToolStripButton _btnFreezeAndCopy;
+        private ToolStripLabel _lblOrchestratorStatus;
+        private System.Windows.Forms.Timer _orchestratorTimer;
+        private int _orchestratorTickCount;
+
+        // NickHQ session ID for the connection hosted in this tab (null = not registered)
+        private string? _orchestratorSessionId;
 
         /// <summary>
         ///Silent close ignores the popup asking for confirmation
@@ -76,6 +85,14 @@ namespace mRemoteNG.UI.Tabs
             };
             _btnFreezeAndCopy.Click += BtnFreezeAndCopy_Click;
 
+            _lblOrchestratorStatus = new ToolStripLabel
+            {
+                Text = "⚙",
+                Visible = false,
+                Alignment = ToolStripItemAlignment.Right,
+                ToolTipText = "Orchestrator status"
+            };
+
             _toolbar = new ToolStrip
             {
                 Dock = DockStyle.Top,
@@ -86,8 +103,149 @@ namespace mRemoteNG.UI.Tabs
             _toolbar.Items.Add(_btnPaste);
             _toolbar.Items.Add(new ToolStripSeparator());
             _toolbar.Items.Add(_btnFreezeAndCopy);
+            _toolbar.Items.Add(_lblOrchestratorStatus);
 
             Controls.Add(_toolbar);
+
+            // Timer to poll orchestrator status once per second
+            _orchestratorTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+            _orchestratorTimer.Tick += OrchestratorTimer_Tick;
+            _orchestratorTimer.Start();
+
+            // Build the tab context menu for orchestration actions
+            InitializeOrchestratorContextMenu();
+        }
+
+        private void InitializeOrchestratorContextMenu()
+        {
+            var menu = new ContextMenuStrip();
+            menu.Opening += OrchestratorContextMenu_Opening;
+
+            // Separator before orchestrator items
+            var sep = new ToolStripSeparator();
+            menu.Items.Add(sep);
+
+            var menuOrchestrate = new ToolStripMenuItem("Orchestrate this session...");
+            menuOrchestrate.Click += MenuOrchestrate_Click;
+            menu.Items.Add(menuOrchestrate);
+
+            var menuWhatDoing = new ToolStripMenuItem("What are you doing?");
+            menuWhatDoing.Click += MenuWhatDoing_Click;
+            menu.Items.Add(menuWhatDoing);
+
+            var menuStop = new ToolStripMenuItem("Stop Orchestration");
+            menuStop.Click += MenuStopOrchestration_Click;
+            menu.Items.Add(menuStop);
+
+            TabPageContextMenuStrip = menu;
+        }
+
+        private void OrchestratorContextMenu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (sender is not ContextMenuStrip menu) return;
+
+            // Resolve session ID fresh each time the menu opens (may have been set after construction)
+            EnsureOrchestratorSessionId();
+
+            bool isPutty = (Tag as InterfaceControl)?.Protocol is PuttyBase;
+            bool isOrchestrated = !string.IsNullOrEmpty(_orchestratorSessionId)
+                                  && OrchestratorRegistry.IsOrchestrated(_orchestratorSessionId);
+
+            // Items: [0] separator, [1] orchestrate, [2] what are you doing, [3] stop
+            menu.Items[0].Visible = isPutty;          // separator — only show if any item below will show
+            menu.Items[1].Visible = isPutty;           // "Orchestrate this session..."
+            menu.Items[2].Visible = isOrchestrated;   // "What are you doing?"
+            menu.Items[3].Visible = isOrchestrated;   // "Stop Orchestration"
+
+            // Hide separator if no items are visible
+            menu.Items[0].Visible = isPutty || isOrchestrated;
+        }
+
+        private void MenuOrchestrate_Click(object sender, EventArgs e)
+        {
+            EnsureOrchestratorSessionId();
+            if (string.IsNullOrEmpty(_orchestratorSessionId)) return;
+
+            InterfaceControl? ifc = Tag as InterfaceControl;
+            string label = ifc?.Info?.Hostname ?? TabText ?? "session";
+
+            using var dlg = new OrchestrateSessionDialog(_orchestratorSessionId, label);
+            dlg.ShowDialog(this);
+        }
+
+        private void MenuWhatDoing_Click(object sender, EventArgs e)
+        {
+            EnsureOrchestratorSessionId();
+            if (string.IsNullOrEmpty(_orchestratorSessionId)) return;
+
+            var engine = OrchestratorRegistry.Get(_orchestratorSessionId);
+            if (engine == null) return;
+
+            new OrchestratorStatusForm(engine).Show(this);
+        }
+
+        private void MenuStopOrchestration_Click(object sender, EventArgs e)
+        {
+            EnsureOrchestratorSessionId();
+            if (string.IsNullOrEmpty(_orchestratorSessionId)) return;
+
+            OrchestratorRegistry.Stop(_orchestratorSessionId);
+        }
+
+        private void EnsureOrchestratorSessionId()
+        {
+            if (_orchestratorSessionId != null) return;
+            if ((Tag as InterfaceControl)?.Protocol is PuttyBase putty)
+                _orchestratorSessionId = putty.NickHqSessionId;
+        }
+
+        private void OrchestratorTimer_Tick(object sender, EventArgs e)
+        {
+            EnsureOrchestratorSessionId();
+
+            if (string.IsNullOrEmpty(_orchestratorSessionId))
+            {
+                _lblOrchestratorStatus.Visible = false;
+                return;
+            }
+
+            var engine = OrchestratorRegistry.Get(_orchestratorSessionId);
+            if (engine == null)
+            {
+                _lblOrchestratorStatus.Visible = false;
+                return;
+            }
+
+            _orchestratorTickCount++;
+            bool altTick = (_orchestratorTickCount % 2) == 0;
+
+            switch (engine.Status)
+            {
+                case OrchestratorStatus.Running:
+                    _lblOrchestratorStatus.Visible = true;
+                    _lblOrchestratorStatus.Text = altTick ? "⚙" : "◌";
+                    _lblOrchestratorStatus.ForeColor = Color.Orange;
+                    break;
+                case OrchestratorStatus.Waiting:
+                    _lblOrchestratorStatus.Visible = true;
+                    _lblOrchestratorStatus.Text = altTick ? "⚙" : "◌";
+                    _lblOrchestratorStatus.ForeColor = Color.Gold;
+                    break;
+                case OrchestratorStatus.Blocked:
+                    _lblOrchestratorStatus.Visible = true;
+                    _lblOrchestratorStatus.Text = "⚠";
+                    _lblOrchestratorStatus.ForeColor = Color.Red;
+                    break;
+                case OrchestratorStatus.Done:
+                    _lblOrchestratorStatus.Visible = true;
+                    _lblOrchestratorStatus.Text = "✓";
+                    _lblOrchestratorStatus.ForeColor = Color.Green;
+                    break;
+                default:
+                    // Stopped / Error — hide indicator
+                    _lblOrchestratorStatus.Visible = false;
+                    break;
+            }
         }
 
         // Find the first child hwnd of the given panel handle (the embedded PuTTY window)
@@ -222,6 +380,14 @@ namespace mRemoteNG.UI.Tabs
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // Stop and dispose the orchestrator poll timer to avoid post-close ticks
+            if (_orchestratorTimer != null)
+            {
+                _orchestratorTimer.Stop();
+                _orchestratorTimer.Dispose();
+                _orchestratorTimer = null;
+            }
+
             if (!protocolClose)
             {
                 if (!silentClose)

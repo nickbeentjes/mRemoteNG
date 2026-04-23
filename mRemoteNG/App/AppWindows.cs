@@ -20,6 +20,7 @@ namespace mRemoteNG.App
         private static ClaudeChatWindow _claudeChatForm;
         private static SessionLogWindow _sessionLogForm;
         private static ScpTransferWindow _scpTransferForm;
+        private static NotificationsWindow _notificationsForm;
 
         internal static ConnectionTreeWindow TreeForm
         {
@@ -43,6 +44,12 @@ namespace mRemoteNG.App
         {
             get => _scpTransferForm ?? (_scpTransferForm = new ScpTransferWindow());
             set => _scpTransferForm = value;
+        }
+
+        internal static NotificationsWindow NotificationsForm
+        {
+            get => _notificationsForm ?? (_notificationsForm = new NotificationsWindow());
+            set => _notificationsForm = value;
         }
 
         internal static ConfigWindow ConfigForm { get; set; } = new ConfigWindow();
@@ -108,6 +115,11 @@ namespace mRemoteNG.App
                         if (_scpTransferForm == null || _scpTransferForm.IsDisposed)
                             _scpTransferForm = new ScpTransferWindow();
                         _scpTransferForm.Show(dockPanel, WeifenLuo.WinFormsUI.Docking.DockState.DockBottom);
+                        break;
+                    case WindowType.NotificationsWindow:
+                        if (_notificationsForm == null || _notificationsForm.IsDisposed)
+                            _notificationsForm = new NotificationsWindow();
+                        _notificationsForm.Show(dockPanel, WeifenLuo.WinFormsUI.Docking.DockState.DockBottom);
                         break;
                 }
             }
