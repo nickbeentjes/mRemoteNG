@@ -9,6 +9,7 @@ using mRemoteNG.Config.DataProviders;
 using mRemoteNG.Config.Putty;
 using mRemoteNG.Config.Settings;
 using mRemoteNG.Connection;
+using mRemoteNG.Connection.NickHq;
 using mRemoteNG.Messages;
 using mRemoteNG.Messages.MessageWriters;
 using mRemoteNG.Themes;
@@ -279,6 +280,9 @@ namespace mRemoteNG.UI.Forms
             }
 
             OptionsForm = new FrmOptions();
+
+            if (NickHqConfig.ConnectOnStartup)
+                NickHqClient.ConnectAll();
 
             if (!Properties.OptionsTabsPanelsPage.Default.CreateEmptyPanelOnStartUp)
             {
