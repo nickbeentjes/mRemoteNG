@@ -819,6 +819,8 @@ namespace mRemoteNG.UI.Forms
             AppWindows.TreeForm.Show(pnlDock, DockState.DockLeft);
             AppWindows.ConfigForm.Show(pnlDock, DockState.DockLeft);
             AppWindows.ErrorsForm.Show(pnlDock, DockState.DockBottomAutoHide);
+            AppWindows.ClaudeChatForm.Show(pnlDock, DockState.DockBottom);
+            AppWindows.SessionLogForm.Show(pnlDock, DockState.DockLeft);
             viewMenu._mMenViewErrorsAndInfos.Checked = true;
 
             ShowFileMenu();

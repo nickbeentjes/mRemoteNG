@@ -45,6 +45,8 @@ namespace mRemoteNG.Connection.Protocol
 
         public bool Focused => NativeMethods.GetForegroundWindow() == PuttyHandle;
 
+        public string SessionLogPath { get; private set; }
+
         #endregion
 
         #region Private Events & Handlers
@@ -278,6 +280,36 @@ namespace mRemoteNG.Connection.Protocol
                 if (_isPuttyNg)
                 {
                     arguments.Add("-hwndparent", InterfaceControl.Handle.ToString());
+                }
+
+                // Session logging — append to every PuTTY-backed connection
+                try
+                {
+                    string logDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "mRemoteNG", "SessionLogs");
+                    Directory.CreateDirectory(logDir);
+
+                    string hostname = InterfaceControl.Info?.Hostname ?? "unknown";
+                    // Sanitise hostname so it is safe as a filename component
+                    foreach (char c in Path.GetInvalidFileNameChars())
+                        hostname = hostname.Replace(c, '_');
+
+                    string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                    SessionLogPath = Path.Combine(logDir, $"{hostname}_{timestamp}.log");
+                    // Add -sessionlog with the path as a separate argument (quoted automatically if it contains spaces)
+                    arguments.Add("-sessionlog");
+                    arguments.Add(SessionLogPath, forceQuotes: true);
+                    arguments.Add("-logtype", "1");
+
+                    // Register the log path so SessionLogWindow can correlate host-call tags
+                    if (InterfaceControl.Info != null)
+                        mRemoteNG.Connection.HostCall.SessionLogRegistry.Register(SessionLogPath, InterfaceControl.Info);
+                }
+                catch (Exception ex)
+                {
+                    Runtime.MessageCollector.AddMessage(MessageClass.WarningMsg,
+                        "PuttyBase: could not set up session logging: " + ex.Message, true);
                 }
 
                 PuttyProcess.StartInfo.Arguments = arguments.ToString();

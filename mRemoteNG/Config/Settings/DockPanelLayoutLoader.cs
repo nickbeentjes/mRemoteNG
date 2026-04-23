@@ -79,6 +79,15 @@ namespace mRemoteNG.Config.Settings
 
                 if (persistString == typeof(ErrorAndInfoWindow).ToString())
                     return AppWindows.ErrorsForm;
+
+                if (persistString == typeof(ClaudeChatWindow).ToString())
+                    return AppWindows.ClaudeChatForm;
+
+                if (persistString == typeof(SessionLogWindow).ToString())
+                    return AppWindows.SessionLogForm;
+
+                if (persistString == typeof(ScpTransferWindow).ToString())
+                    return AppWindows.ScpTransferForm;
             }
             catch (Exception ex)
             {

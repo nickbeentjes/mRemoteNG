@@ -13,5 +13,8 @@
         ExternalApps = 13,
         PortScan = 14,
         UltraVNCSC = 16,
+        ClaudeChat = 17,
+        SessionLog = 18,
+        ScpTransfer = 19,
     }
 }

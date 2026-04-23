@@ -17,11 +17,32 @@ namespace mRemoteNG.App
         private static PortScanWindow _portscanForm;
         private static UltraVNCWindow _ultravncscForm;
         private static ConnectionTreeWindow _treeForm;
+        private static ClaudeChatWindow _claudeChatForm;
+        private static SessionLogWindow _sessionLogForm;
+        private static ScpTransferWindow _scpTransferForm;
 
         internal static ConnectionTreeWindow TreeForm
         {
             get => _treeForm ?? (_treeForm = new ConnectionTreeWindow());
             set => _treeForm = value;
+        }
+
+        internal static ClaudeChatWindow ClaudeChatForm
+        {
+            get => _claudeChatForm ?? (_claudeChatForm = new ClaudeChatWindow());
+            set => _claudeChatForm = value;
+        }
+
+        internal static SessionLogWindow SessionLogForm
+        {
+            get => _sessionLogForm ?? (_sessionLogForm = new SessionLogWindow());
+            set => _sessionLogForm = value;
+        }
+
+        internal static ScpTransferWindow ScpTransferForm
+        {
+            get => _scpTransferForm ?? (_scpTransferForm = new ScpTransferWindow());
+            set => _scpTransferForm = value;
         }
 
         internal static ConfigWindow ConfigForm { get; set; } = new ConfigWindow();
@@ -77,6 +98,16 @@ namespace mRemoteNG.App
                         if (_ultravncscForm == null || _ultravncscForm.IsDisposed)
                             _ultravncscForm = new UltraVNCWindow();
                         _ultravncscForm.Show(dockPanel);
+                        break;
+                    case WindowType.SessionLog:
+                        if (_sessionLogForm == null || _sessionLogForm.IsDisposed)
+                            _sessionLogForm = new SessionLogWindow();
+                        _sessionLogForm.Show(dockPanel);
+                        break;
+                    case WindowType.ScpTransfer:
+                        if (_scpTransferForm == null || _scpTransferForm.IsDisposed)
+                            _scpTransferForm = new ScpTransferWindow();
+                        _scpTransferForm.Show(dockPanel, DockState.DockBottom);
                         break;
                 }
             }
